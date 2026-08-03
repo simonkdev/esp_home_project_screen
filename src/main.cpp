@@ -3,6 +3,9 @@
 #include "TFT_eSPI.h"
 #include "driver.h"
 #include "display.h"
+#include "WiFi.h"
+#include "networking.h"
+#include "secrets.h"
 
 const int BUTTON_PIN = 44; // the number of the pushbutton pin
 int lastState = HIGH; // the previous state from the input pin
@@ -15,6 +18,7 @@ void setup()
     pinMode(BUTTON_PIN, INPUT_PULLUP);
     initDisplay();
     initSensor();
+    testWiFi();
 }
 
 void loop()
@@ -44,5 +48,5 @@ void loop()
     lastState = currentState;
 
 
-    //delay(200);
+    delay(200);
 }
