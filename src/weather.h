@@ -1,3 +1,5 @@
+#pragma once
+
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
