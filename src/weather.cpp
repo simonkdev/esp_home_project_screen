@@ -218,21 +218,6 @@ const Weather::ForecastDay& Weather::today() const
     return m_forecast[0];
 }
 
-// String Weather::download()
-// {
-//     String url = buildWeatherURL();
-
-//     if (!m_http->begin(*m_client, url))
-//         return "";
-
-//     int status = m_http->GET();
-//     m_lastHttpStatus = status;
-
-//     if (status <= 0)
-//         return "";
-
-//     return m_http->getString();
-// }
 
 String Weather::download()
 {

@@ -7,7 +7,7 @@
 #include "networking.h"
 #include "secrets.h"
 #include "weather.h"
-
+#include "clock.h"
 
 const int BUTTON_PIN = 44; // the number of the pushbutton pin
 int lastState = HIGH; // the previous state from the input pin
@@ -23,6 +23,7 @@ void setup()
     initDisplay();
     initSensor();
     testWiFi();
+    syncClock();
 }
 
 void loop()
@@ -48,9 +49,5 @@ void loop()
         }
     };
 
-    // save the last state
     lastState = currentState;
-
-
-    delay(200);
 }
