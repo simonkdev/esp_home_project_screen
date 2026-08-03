@@ -2,7 +2,7 @@
 .devenv*
 devenv.local.nix
 devenv.local.yaml
-include/*
+include/secrets.h
 lib/*
 .pio
 
