@@ -13,6 +13,8 @@ const int BUTTON_PIN = 44; // the number of the pushbutton pin
 int lastState = HIGH; // the previous state from the input pin
 int currentState;
 
+Weather weather;
+
 void setup()
 {
     Serial.begin(115200);
@@ -21,8 +23,6 @@ void setup()
     initDisplay();
     initSensor();
     testWiFi();
-    delay(1000);
-    testWeather();
 }
 
 void loop()
