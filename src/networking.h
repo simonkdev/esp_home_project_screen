@@ -3,3 +3,4 @@
 
 void setupWiFi(void);
 void testWiFi(void);
+void disableWiFi(void);

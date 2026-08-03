@@ -42,8 +42,12 @@ void testWiFi()
     setupWiFi();
     Serial.print("Local IP: ");
     Serial.println(WiFi.localIP());
+    disableWiFi();
+}
+
+void disableWiFi()
+{
     WiFi.disconnect();
-    Serial.println("WiFi disconnected");
     WiFi.mode(WIFI_OFF);
     Serial.println("WiFi mode set to WIFI_OFF");
 }
