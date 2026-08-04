@@ -1,5 +1,6 @@
 #include "display.h"
 
+
 #ifdef EPAPER_ENABLE
 EPaper epaper;
 #endif
@@ -266,3 +267,229 @@ void drawScreen_1(void)
     epaper.update();
 }
 // [END Seeed_GFX converted]
+
+#define GRID_TOP_Y 46
+#define HOUR_HEIGHT 25
+#define DAY_WIDTH 108
+#define DAY_START_X 44
+#define GRID_TOP_Y 46
+#define HOUR_HEIGHT 25
+
+const int COLUMN_X[7] =
+{
+    44,
+    152,
+    260,
+    368,
+    476,
+    584,
+    692
+};
+
+static const unsigned char PROGMEM image_paint_64_bits[] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x07,0x00,0x1c,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x1f,0xc0,0x7f,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x1f,0xc0,0x7f,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xe0,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xe0,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xe0,0xff,0x80,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x1f,0xc0,0x7f,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x1f,0xc0,0x7f,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x07,0x00,0x1c,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+
+
+void drawCalendar(const Calendar& calendar1, const Calendar& calendar2)
+{
+    epaper.fillScreen(TFT_WHITE);
+
+    time_t now = time(nullptr);
+
+    struct tm nowTm;
+    localtime_r(&now, &nowTm);
+
+    drawCalendarGrid(nowTm);
+    drawCalendarEvents(calendar1, now);
+    drawCalendarEvents(calendar2, now);
+
+    epaper.update();
+}
+
+void drawCalendarGrid(struct tm nowTm)
+{
+    const char* days[] =
+    {
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri",
+        "Sat",
+        "Sun"
+    };
+
+    for(int i = 0; i < 7; i++)
+    {
+        epaper.drawLine(COLUMN_X[i], -1, COLUMN_X[i], 479, TFT_BLACK);
+    }
+
+    epaper.drawLine(800, -1, 800, 479, TFT_BLACK);
+
+    for(int h = 6; h <= 22; h++)
+    {
+        int y = GRID_TOP_Y + (h - 6) * HOUR_HEIGHT;
+
+        epaper.drawLine(30, y, 830, y, TFT_BLACK);
+
+        epaper.setTextColor(TFT_BLACK);
+        epaper.setTextSize(1);
+
+        if(h < 10)
+            epaper.setCursor(4, y - 4);
+        else
+            epaper.setCursor(0, y - 4);
+
+        epaper.print(h);
+        epaper.print(":00");
+    }
+
+    struct tm monday = nowTm;
+
+    int offset = (nowTm.tm_wday + 6) % 7;
+
+    monday.tm_mday -= offset;
+    mktime(&monday);
+
+    epaper.setTextSize(2);
+
+    for(int i = 0; i < 7; i++)
+    {
+        struct tm day = monday;
+        day.tm_mday += i;
+        mktime(&day);
+
+        int x = COLUMN_X[i];
+
+        epaper.setCursor(x + 34, 8);
+        epaper.print(days[i]);
+
+        epaper.setTextSize(2);
+
+        char buffer[3];
+        sprintf(buffer, "%d", day.tm_mday);
+
+        int centerX = x + DAY_WIDTH / 2;
+        int textWidth = strlen(buffer) * 12;
+        int textX = centerX - textWidth / 2;
+
+        if(day.tm_mday == nowTm.tm_mday &&
+           day.tm_mon == nowTm.tm_mon &&
+           day.tm_year == nowTm.tm_year)
+        {
+            epaper.drawRect(
+                centerX - 11,
+                23,
+                22,
+                22,
+                TFT_BLACK
+            );
+        }
+
+        epaper.setCursor(textX, 27);
+        epaper.print(buffer);
+
+        epaper.setTextSize(2);
+    }
+
+    int currentDay = (nowTm.tm_wday + 6) % 7;
+
+    int minutesSince6 =
+        nowTm.tm_hour * 60 +
+        nowTm.tm_min -
+        360;
+
+    minutesSince6 = constrain(minutesSince6, 0, 16 * 60);
+
+    int bitmapY =
+        GRID_TOP_Y +
+        (minutesSince6 * HOUR_HEIGHT) / 60 -
+        5;
+
+    int bitmapX =
+        COLUMN_X[currentDay] - 3;
+
+    epaper.drawBitmap(
+        bitmapX,
+        bitmapY,
+        image_paint_64_bits,
+        115,
+        10,
+        TFT_BLACK
+    );
+}
+
+void drawCalendarEvents(
+    const Calendar& calendar,
+    time_t now)
+{
+    epaper.setTextSize(1);
+
+    for(uint8_t i = 0; i < calendar.eventCount(); i++)
+    {
+        const Calendar::Event& e = calendar.event(i);
+
+        struct tm startTm;
+        struct tm endTm;
+
+        localtime_r(&e.start, &startTm);
+        localtime_r(&e.end, &endTm);
+
+        int day = (startTm.tm_wday + 6) % 7;
+
+        if(day < 0 || day > 6)
+            continue;
+
+        int startMinutes =
+            startTm.tm_hour * 60 +
+            startTm.tm_min;
+
+        int endMinutes =
+            endTm.tm_hour * 60 +
+            endTm.tm_min;
+
+        int y =
+            GRID_TOP_Y +
+            ((startMinutes - 360) * HOUR_HEIGHT) / 60;
+
+        int h =
+            ((endMinutes - startMinutes) * HOUR_HEIGHT) / 60;
+
+        if(h < 12)
+            h = 12;
+
+        int x = COLUMN_X[day] + 3;
+
+        bool finished = e.end < now;
+
+        if(finished)
+        {
+            epaper.drawRect(
+                x,
+                y,
+                102,
+                h,
+                TFT_BLACK);
+
+            epaper.setTextColor(TFT_BLACK);
+        }
+        else
+        {
+            epaper.fillRect(
+                x,
+                y,
+                102,
+                h,
+                TFT_BLACK);
+
+            epaper.setTextColor(TFT_WHITE);
+        }
+
+        epaper.setCursor(
+            x + 3,
+            y + 3);
+
+        epaper.print(e.title);
+
+        epaper.setTextColor(TFT_BLACK);
+    }
+}
