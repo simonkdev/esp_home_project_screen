@@ -35,7 +35,6 @@ void setup()
     syncClock();
     setupWiFi();
     delay(1000);
-    calendar2.testCalendar();
 }
 
 void loop()
@@ -45,21 +44,36 @@ void loop()
 
     if(lastState == LOW && currentState == HIGH)
     {
-        float temp, hum;
-        getReadings(temp, hum);
-        if (temp == 1.0 && hum == 1.0)
-        {
-            Serial.print("ERR: Sensor unavailable.");
-        } else
-        {
-            displayMeasurementTest(temp);
-            Serial.print("Temperature: ");
-            Serial.print(temp);
-            Serial.println(" °C");
-            Serial.print("Humidity: ");
-            Serial.print(hum);
-            Serial.println(" %");
-        }
+        weather.begin();
+        weather.update();
+        drawForecastScreen(weather.current(), weather.today(), weather.tomorrow(), weather.dayAfterTomorrow());
+
+        // float tempIn, humIn;
+        // getReadings(tempIn, humIn);
+        // weather.begin();
+        // weather.update();
+        // float tempOut = weather.current().temperature;
+        // float humOut = weather.current().humidity;
+        // drawUIClock(tempIn, tempOut, humIn, humOut);
+
+        //drawAccurateClock();
+
+
+        // float temp, hum;
+        // getReadings(temp, hum);
+        // if (temp == 1.0 && hum == 1.0)
+        // {
+        //     Serial.print("ERR: Sensor unavailable.");
+        // } else
+        // {
+        //     displayMeasurementTest(temp);
+        //     Serial.print("Temperature: ");
+        //     Serial.print(temp);
+        //     Serial.println(" °C");
+        //     Serial.print("Humidity: ");
+        //     Serial.print(hum);
+        //     Serial.println(" %");
+        // }
     };
 
     if(lastState2 == LOW && currentState2 == HIGH)

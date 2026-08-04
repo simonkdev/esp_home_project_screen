@@ -275,6 +275,7 @@ bool Weather::parseWeather(
 
         forecast[i].highTemperature = doc["daily"]["temperature_2m_max"][i];
         forecast[i].lowTemperature = doc["daily"]["temperature_2m_min"][i];
+        forecast[i].humidity = doc["daily"]["relative_humidity_2m_mean"][i];
 
         forecast[i].windSpeed = doc["daily"]["wind_speed_10m_max"][i];
         forecast[i].windDirection = doc["daily"]["wind_direction_10m_dominant"][i].as<uint16_t>();
@@ -304,8 +305,7 @@ String Weather::buildWeatherURL()
 
     url += "&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,rain,weather_code";
 
-    url += "&daily=temperature_2m_max,temperature_2m_min,wind_speed_10m_max,wind_direction_10m_dominant,rain_sum,precipitation_probability_max,weather_code,sunrise,sunset";
-
+    url += "&daily=temperature_2m_max,temperature_2m_min,relative_humidity_2m_mean,wind_speed_10m_max,wind_direction_10m_dominant,rain_sum,precipitation_probability_max,weather_code,sunrise,sunset";
     url += "&forecast_days=3";
 
     url += "&timezone=auto";
@@ -495,6 +495,17 @@ time_t Weather::parseTimeStamp(const char* value)
                         (value[15] - '0');
 
     timeinfo.tm_sec = 0;
+    timeinfo.tm_isdst = -1;
 
     return mktime(&timeinfo);
 }
+
+const Weather::ForecastDay& Weather::tomorrow() const
+ {
+     return m_forecast[1];
+ }
+
+ const Weather::ForecastDay& Weather::dayAfterTomorrow() const
+ {
+     return m_forecast[2];
+ }

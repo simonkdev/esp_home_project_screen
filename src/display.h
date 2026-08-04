@@ -16,6 +16,9 @@ void drawCalendarEvents(
     const Calendar& calendar,
     time_t now
 );
+void drawAccurateClock(void);
+void drawUIClock(int insideValue, int outsideValue, int insideHumidity, int outsideHumidity);
+void drawForecastScreen(Weather::CurrentConditions current, Weather::ForecastDay today, Weather::ForecastDay tomorrow, Weather::ForecastDay dayAfterTomorrow);
 
 #ifdef EPAPER_ENABLE
 extern EPaper epaper;

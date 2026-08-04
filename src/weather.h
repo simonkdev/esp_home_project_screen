@@ -83,6 +83,7 @@ public:
 
         float highTemperature;
         float lowTemperature;
+        float humidity;
 
         float windSpeed;
         uint16_t windDirection;
