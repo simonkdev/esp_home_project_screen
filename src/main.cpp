@@ -8,6 +8,8 @@
 #include "secrets.h"
 #include "weather.h"
 #include "clock.h"
+#include "calender.h"
+
 
 const int BUTTON_PIN = 44; // the number of the pushbutton pin
 const int BUTTON_PIN_2 = 43;
@@ -18,6 +20,8 @@ int lastState2 = HIGH;
 int currentState2;
 
 Weather weather;
+Calendar calendar1(CALENDAR1_URL);
+Calendar calendar2(CALENDAR2_URL);
 
 void setup()
 {
@@ -30,6 +34,8 @@ void setup()
     testWiFi();
     syncClock();
     setupWiFi();
+    delay(1000);
+    calendar2.testCalendar();
 }
 
 void loop()
@@ -58,7 +64,12 @@ void loop()
 
     if(lastState2 == LOW && currentState2 == HIGH)
     {
-        drawScreen_1();
+        calendar1.begin();
+        calendar2.begin();
+        calendar1.update();
+        calendar2.update();
+        drawCalendar(calendar1, calendar2);
+        //drawScreen_1();
         // weather.begin();
         // if(weather.update())
         // {
