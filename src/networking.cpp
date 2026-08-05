@@ -23,25 +23,41 @@ String Get_WiFiStatus(int Status){
         case WL_DISCONNECTED:
         return "WL_DISCONNECTED";
     }
+
+    return "UNKNOWN";
 }
 
-void setupWiFi()
+bool setupWiFi(uint32_t timeoutMs)
 {
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
     WiFiStatus = WiFi.status();
+    uint32_t startedAt = millis();
+
     while(WiFiStatus != WL_CONNECTED){
+        if (millis() - startedAt >= timeoutMs)
+        {
+            Serial.print("WiFi connection timed out: ");
+            Serial.println(Get_WiFiStatus(WiFiStatus));
+            return false;
+        }
+
         delay(250);
         WiFiStatus = WiFi.status();
     }
+
     Serial.println("WiFi connected");
+    return true;
 }
 
 void testWiFi()
 {
-    setupWiFi();
-    Serial.print("Local IP: ");
-    Serial.println(WiFi.localIP());
+    if (setupWiFi())
+    {
+        Serial.print("Local IP: ");
+        Serial.println(WiFi.localIP());
+    }
+
     disableWiFi();
 }
 
