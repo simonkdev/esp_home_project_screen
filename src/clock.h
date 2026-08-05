@@ -1,4 +1,6 @@
+#pragma once
+
 #include <time.h>
 #include "networking.h"
 
-void syncClock(void);
+bool syncClock(uint32_t timeoutMs = 15000);
