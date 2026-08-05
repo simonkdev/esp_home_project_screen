@@ -44,17 +44,17 @@ void loop()
 
     if(lastState == LOW && currentState == HIGH)
     {
-        weather.begin();
-        weather.update();
-        drawForecastScreen(weather.current(), weather.today(), weather.tomorrow(), weather.dayAfterTomorrow());
-
-        // float tempIn, humIn;
-        // getReadings(tempIn, humIn);
         // weather.begin();
         // weather.update();
-        // float tempOut = weather.current().temperature;
-        // float humOut = weather.current().humidity;
-        // drawUIClock(tempIn, tempOut, humIn, humOut);
+        // drawForecastScreen(weather.current(), weather.today(), weather.tomorrow(), weather.dayAfterTomorrow());
+
+        float tempIn, humIn;
+        getReadings(tempIn, humIn);
+        weather.begin();
+        weather.update();
+        float tempOut = weather.current().temperature;
+        float humOut = weather.current().humidity;
+        drawUIClock(tempIn, tempOut, humIn, humOut);
 
         //drawAccurateClock();
 

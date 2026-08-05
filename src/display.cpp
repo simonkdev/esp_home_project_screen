@@ -1,6 +1,5 @@
 #include "display.h"
 
-
 #ifdef EPAPER_ENABLE
 EPaper epaper;
 #endif
@@ -494,208 +493,194 @@ void drawCalendarEvents(
     }
 }
 
-void drawAccurateClock()
+void drawClockFace(int16_t cx, int16_t cy, int16_t radius)
 {
-  const int16_t cx = 400;
-  const int16_t cy = 240;
+    epaper.fillScreen(TFT_WHITE);
 
-  // 1.625x original size
-  const int16_t radius = 195;
-
-  const int16_t updateX = cx - radius - 15;
-  const int16_t updateY = cy - radius - 15;
-  const int16_t updateSize = radius * 2 + 30;
-
-
-  int16_t oldHx = cx;
-  int16_t oldHy = cy;
-  int16_t oldMx = cx;
-  int16_t oldMy = cy;
-
-  int lastMinute = -1;
-  int partialCount = 0;
-
-
-  // Draw static clock face
-
-  epaper.fillScreen(TFT_WHITE);
-
-  epaper.fillCircle(
-    cx,
-    cy,
-    radius,
-    TFT_BLACK
-  );
-
-  epaper.fillCircle(
-    cx,
-    cy,
-    radius - 12,
-    TFT_WHITE
-  );
-
-
-  // Hour marks
-  for (int i = 0; i < 360; i += 30)
-  {
-    float sx = cos((i - 90) * 0.0174532925);
-    float sy = sin((i - 90) * 0.0174532925);
-
-    epaper.drawLine(
-      sx * (radius - 10) + cx,
-      sy * (radius - 10) + cy,
-      sx * (radius - 45) + cx,
-      sy * (radius - 45) + cy,
-      TFT_BLACK
-    );
-  }
-
-
-  // Minute marks
-  for (int i = 0; i < 360; i += 6)
-  {
-    float sx = cos((i - 90) * 0.0174532925);
-    float sy = sin((i - 90) * 0.0174532925);
-
-    int16_t x = sx * (radius - 38) + cx;
-    int16_t y = sy * (radius - 38) + cy;
-
-    epaper.drawPixel(
-      x,
-      y,
+    epaper.fillCircle(
+      cx,
+      cy,
+      radius,
       TFT_BLACK
     );
 
-    if (i % 90 == 0)
+    epaper.fillCircle(
+      cx,
+      cy,
+      radius - 12,
+      TFT_WHITE
+    );
+
+
+    // Hour marks
+    for (int i = 0; i < 360; i += 30)
     {
-      epaper.fillCircle(
-        x,
-        y,
-        3,
+      float sx = cos((i - 90) * 0.0174532925);
+      float sy = sin((i - 90) * 0.0174532925);
+
+      epaper.drawLine(
+        sx * (radius - 10) + cx,
+        sy * (radius - 10) + cy,
+        sx * (radius - 45) + cx,
+        sy * (radius - 45) + cy,
         TFT_BLACK
       );
     }
-  }
 
 
-  epaper.fillCircle(
-    cx,
-    cy,
-    5,
-    TFT_BLACK
-  );
-
-
-  // Initial full refresh
-  epaper.update();
-
-
-  while (true)
-  {
-    struct tm timeinfo;
-
-    if (getLocalTime(&timeinfo))
+    // Minute marks
+    for (int i = 0; i < 360; i += 6)
     {
-      int hh = timeinfo.tm_hour;
-      int mm = timeinfo.tm_min;
+      float sx = cos((i - 90) * 0.0174532925);
+      float sy = sin((i - 90) * 0.0174532925);
 
+      int16_t x = sx * (radius - 38) + cx;
+      int16_t y = sy * (radius - 38) + cy;
 
-      if (mm != lastMinute)
+      epaper.drawPixel(
+        x,
+        y,
+        TFT_BLACK
+      );
+
+      if (i % 90 == 0)
       {
-        lastMinute = mm;
-
-
-        float mdeg = mm * 6.0;
-        float hdeg = (hh % 12) * 30.0 + mdeg / 12.0;
-
-
-        float mx = cos((mdeg - 90) * 0.0174532925);
-        float my = sin((mdeg - 90) * 0.0174532925);
-
-        float hx = cos((hdeg - 90) * 0.0174532925);
-        float hy = sin((hdeg - 90) * 0.0174532925);
-
-
-        int16_t newMx = mx * 154 + cx;
-        int16_t newMy = my * 154 + cy;
-
-        int16_t newHx = hx * 114 + cx;
-        int16_t newHy = hy * 114 + cy;
-
-
-        // Erase old hands
-        epaper.drawLine(
-          oldMx,
-          oldMy,
-          cx,
-          cy,
-          TFT_WHITE
-        );
-
-        epaper.drawLine(
-          oldHx,
-          oldHy,
-          cx,
-          cy,
-          TFT_WHITE
-        );
-
-
-        // Draw new hands
-        epaper.drawLine(
-          newMx,
-          newMy,
-          cx,
-          cy,
-          TFT_BLACK
-        );
-
-        epaper.drawLine(
-          newHx,
-          newHy,
-          cx,
-          cy,
-          TFT_BLACK
-        );
-
-
         epaper.fillCircle(
-          cx,
-          cy,
-          5,
+          x,
+          y,
+          3,
           TFT_BLACK
         );
-
-
-        oldMx = newMx;
-        oldMy = newMy;
-
-        oldHx = newHx;
-        oldHy = newHy;
-
-
-        // Partial refresh only
-        epaper.updataPartial(
-          updateX,
-          updateY,
-          updateSize,
-          updateSize
-        );
-
-
-        partialCount++;
-
-        // Periodic ghost clearing
-        if (partialCount >= 30)
-        {
-          epaper.update();
-          partialCount = 0;
-        }
       }
     }
 
-    delay(1000);
-  }
+
+    epaper.fillCircle(
+      cx,
+      cy,
+      5,
+      TFT_BLACK
+    );
+}
+
+void drawAccurateClock()
+{
+    const int16_t cx = 400;
+    const int16_t cy = 240;
+    const int16_t radius = 195; //195
+
+    const int16_t updateX = cx - radius - 15;
+    const int16_t updateY = cy - radius - 15;
+    const int16_t updateSize = radius * 2 + 30;
+
+    int16_t oldHx = cx;
+    int16_t oldHy = cy;
+    int16_t oldMx = cx;
+    int16_t oldMy = cy;
+
+    bool firstDraw = true;
+
+    int lastMinute = -1;
+    int partialCount = 0;
+
+    // Draw static background once
+    drawClockFace(cx, cy, radius);
+
+    //epaper.fillScreen(TFT_WHITE);
+    epaper.update();
+
+    while (true)
+    {
+        //epaper.fillScreen(TFT_WHITE);
+        struct tm timeinfo;
+
+        if (getLocalTime(&timeinfo))
+        {
+            int hh = timeinfo.tm_hour;
+            int mm = timeinfo.tm_min;
+
+            if (mm != lastMinute)
+            {
+                lastMinute = mm;
+
+                float mdeg = mm * 6.0f;
+                float hdeg = (hh % 12) * 30.0f + mdeg / 12.0f;
+
+                float mx = cos((mdeg - 90) * 0.0174532925f);
+                float my = sin((mdeg - 90) * 0.0174532925f);
+
+                float hx = cos((hdeg - 90) * 0.0174532925f);
+                float hy = sin((hdeg - 90) * 0.0174532925f);
+
+                int16_t newMx = mx * 154 + cx;
+                int16_t newMy = my * 154 + cy;
+
+                int16_t newHx = hx * 114 + cx;
+                int16_t newHy = hy * 114 + cy;
+
+                // Erase previous hands (skip first time)
+                if (!firstDraw)
+                {
+                    epaper.drawLine(oldMx, oldMy, cx, cy, TFT_WHITE);
+                    epaper.drawLine(oldHx, oldHy, cx, cy, TFT_WHITE);
+                    epaper.drawLine(oldMx, oldMy, cx, cy, TFT_WHITE);
+                    epaper.drawLine(oldHx, oldHy, cx, cy, TFT_WHITE);
+                }
+
+                // Draw new hands
+                epaper.drawLine(newMx, newMy, cx, cy, TFT_BLACK);
+                epaper.drawLine(newHx, newHy, cx, cy, TFT_BLACK);
+                epaper.drawLine(newMx, newMy, cx, cy, TFT_BLACK);
+                epaper.drawLine(newHx, newHy, cx, cy, TFT_BLACK);
+
+                // Restore centre cap
+                epaper.fillCircle(cx, cy, 5, TFT_BLACK);
+
+                oldMx = newMx;
+                oldMy = newMy;
+                oldHx = newHx;
+                oldHy = newHy;
+
+                firstDraw = false;
+
+                // epaper.updataPartial(
+                //     updateX,
+                //     updateY,
+                //     updateSize,
+                //     updateSize
+                // );
+
+                // epaper.updataPartial(
+                //     300,
+                //     140,
+                //     200,
+                //     200
+                // );
+                epaper.update();
+
+                partialCount++;
+
+                if (partialCount >= 30)
+                {
+                    // Rebuild framebuffer completely
+                    drawClockFace(cx, cy, radius);
+
+                    epaper.drawLine(oldMx, oldMy, cx, cy, TFT_BLACK);
+                    epaper.drawLine(oldHx, oldHy, cx, cy, TFT_BLACK);
+                    epaper.drawLine(oldMx, oldMy, cx, cy, TFT_BLACK);
+                    epaper.drawLine(oldHx, oldHy, cx, cy, TFT_BLACK);
+
+                    epaper.fillCircle(cx, cy, 5, TFT_BLACK);
+
+                    epaper.update();
+
+                    partialCount = 0;
+                }
+            }
+        }
+
+        delay(1000);
+    }
 }
 
 static const unsigned char PROGMEM ui_clock_bitmap[] = {
@@ -937,12 +922,7 @@ void drawUIClock(int insideValue, int outsideValue, int insideHumidity, int outs
         oldHy = newHy;
 
 
-        epaper.updataPartial(
-          updateX,
-          updateY,
-          updateSize,
-          updateSize
-        );
+        epaper.update();
 
 
         partialCount++;
@@ -1424,4 +1404,152 @@ void drawForecastScreen(Weather::CurrentConditions current, Weather::ForecastDay
     epaper.print(datStr);
 
     epaper.update();
+}
+
+
+
+
+
+
+
+#ifdef EPAPER_ENABLE
+static uint8_t conv2d(const char *p)
+{
+  uint8_t v = 0;
+  if ('0' <= *p && *p <= '9')
+    v = *p - '0';
+  return 10 * v + *++p - '0';
+}
+#endif
+
+
+void PartialTest()
+{
+    float sx = 0, sy = 1, mx = 1, my = 0, hx = -1, hy = 0; // Saved H, M, S x & y multipliers
+    float sdeg = 0, mdeg = 0, hdeg = 0;
+    uint16_t osx = 120, osy = 120, omx = 120, omy = 120, ohx = 120, ohy = 120; // Saved H, M, S x & y coords
+    uint16_t x0 = 0, x1 = 0, yy0 = 0, yy1 = 0;
+    uint32_t targetTime = 0; // for next 1 second timeout
+
+    uint8_t hh = conv2d(__TIME__), mm = conv2d(__TIME__ + 3), ss = conv2d(__TIME__ + 6);
+
+    bool initial = 1;
+
+    #ifdef EPAPER_ENABLE
+      epaper.begin();
+      epaper.setRotation(0);
+
+      epaper.fillScreen(TFT_WHITE);
+
+      epaper.setTextColor(TFT_BLACK, TFT_WHITE);
+
+      // Draw clock face
+      epaper.fillCircle(120, 120, 118, TFT_BLACK);
+      epaper.fillCircle(120, 120, 110, TFT_WHITE);
+
+      // Draw 12 lines
+      for (int i = 0; i < 360; i += 30)
+      {
+        sx = cos((i - 90) * 0.0174532925);
+        sy = sin((i - 90) * 0.0174532925);
+        x0 = sx * 114 + 120;
+        yy0 = sy * 114 + 120;
+        x1 = sx * 100 + 120;
+        yy1 = sy * 100 + 120;
+
+        epaper.drawLine(x0, yy0, x1, yy1, TFT_BLACK);
+      }
+
+      // Draw 60 dots
+      for (int i = 0; i < 360; i += 6)
+      {
+        sx = cos((i - 90) * 0.0174532925);
+        sy = sin((i - 90) * 0.0174532925);
+        x0 = sx * 102 + 120;
+        yy0 = sy * 102 + 120;
+
+        epaper.drawPixel(x0, yy0, TFT_BLACK);
+
+        if (i == 0 || i == 180)
+          epaper.fillCircle(x0, yy0, 2, TFT_BLACK);
+        if (i == 90 || i == 270)
+          epaper.fillCircle(x0, yy0, 2, TFT_BLACK);
+      }
+
+      epaper.fillCircle(120, 121, 3, TFT_BLACK);
+
+      epaper.drawCentreString("Time flies", 120, 260, 4);
+
+      epaper.update();
+
+      targetTime = millis() + 1000;
+    #endif
+
+
+    while(true)
+    {
+    #ifdef EPAPER_ENABLE
+      if (targetTime < millis())
+      {
+        targetTime += 1000;
+
+        ss++;
+        if (ss == 60)
+        {
+          ss = 0;
+          mm++;
+          if (mm > 59)
+          {
+            mm = 0;
+            hh++;
+            if (hh > 23)
+            {
+              hh = 0;
+            }
+          }
+        }
+
+        sdeg = ss * 6;
+        mdeg = mm * 6 + sdeg * 0.01666667;
+        hdeg = hh * 30 + mdeg * 0.0833333;
+
+        hx = cos((hdeg - 90) * 0.0174532925);
+        hy = sin((hdeg - 90) * 0.0174532925);
+        mx = cos((mdeg - 90) * 0.0174532925);
+        my = sin((mdeg - 90) * 0.0174532925);
+        sx = cos((sdeg - 90) * 0.0174532925);
+        sy = sin((sdeg - 90) * 0.0174532925);
+
+        if (ss == 0 || initial)
+        {
+          initial = 0;
+
+          epaper.drawLine(ohx, ohy, 120, 121, TFT_WHITE);
+          ohx = hx * 62 + 121;
+          ohy = hy * 62 + 121;
+
+          epaper.drawLine(omx, omy, 120, 121, TFT_WHITE);
+          omx = mx * 84 + 120;
+          omy = my * 84 + 121;
+        }
+
+        epaper.drawLine(osx, osy, 120, 121, TFT_WHITE);
+
+        osx = sx * 90 + 121;
+        osy = sy * 90 + 121;
+
+        epaper.drawLine(osx, osy, 120, 121, TFT_BLACK);
+        epaper.drawLine(ohx, ohy, 120, 121, TFT_BLACK);
+        epaper.drawLine(omx, omy, 120, 121, TFT_BLACK);
+        epaper.drawLine(osx, osy, 120, 121, TFT_BLACK);
+
+        epaper.fillCircle(120, 121, 3, TFT_BLACK);
+
+        // Partial refresh of the clock area only
+        epaper.updataPartial(0, 0, 240, 240);
+      }
+    #endif
+    }
+
+
 }
