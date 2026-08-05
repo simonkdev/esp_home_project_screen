@@ -4,6 +4,8 @@
 EPaper epaper;
 #endif
 
+static DisplayScreen activeDisplayScreen = DisplayScreen::None;
+
 void initDisplay()
 {
     #ifdef EPAPER_ENABLE
@@ -19,7 +21,31 @@ void initDisplay()
     }
 
     epaper.update();
+    activeDisplayScreen = DisplayScreen::None;
     #endif
+}
+
+DisplayScreen currentDisplayScreen()
+{
+    return activeDisplayScreen;
+}
+
+bool updateDisplay()
+{
+    switch (activeDisplayScreen)
+    {
+        case DisplayScreen::AccurateClock:
+            return updateAccurateClockIfNeeded();
+
+        case DisplayScreen::UIClock:
+            return updateUIClockIfNeeded();
+
+        case DisplayScreen::None:
+        case DisplayScreen::Forecast:
+        case DisplayScreen::Calendar:
+        default:
+            return false;
+    }
 }
 
 void displayMeasurementTest(float value)
@@ -290,6 +316,7 @@ static const unsigned char PROGMEM image_paint_64_bits[] = {0x00,0x00,0x00,0x00,
 
 void drawCalendar(const Calendar& calendar1, const Calendar& calendar2)
 {
+    activeDisplayScreen = DisplayScreen::Calendar;
     epaper.fillScreen(TFT_WHITE);
 
     time_t now = time(nullptr);
@@ -563,149 +590,234 @@ void drawClockFace(int16_t cx, int16_t cy, int16_t radius)
     );
 }
 
+struct ClockHandState
+{
+    int16_t oldHx;
+    int16_t oldHy;
+    int16_t oldMx;
+    int16_t oldMy;
+    int lastMinute;
+    int partialCount;
+    bool initialized;
+};
+
+static ClockHandState accurateClockState = {400, 240, 400, 240, -1, 0, false};
+static ClockHandState uiClockState = {584, 236, 584, 236, -1, 0, false};
+
 void drawAccurateClock()
 {
+    activeDisplayScreen = DisplayScreen::AccurateClock;
+
     const int16_t cx = 400;
     const int16_t cy = 240;
     const int16_t radius = 195; //195
 
-    const int16_t updateX = cx - radius - 15;
-    const int16_t updateY = cy - radius - 15;
-    const int16_t updateSize = radius * 2 + 30;
-
-    int16_t oldHx = cx;
-    int16_t oldHy = cy;
-    int16_t oldMx = cx;
-    int16_t oldMy = cy;
-
-    bool firstDraw = true;
-
-    int lastMinute = -1;
-    int partialCount = 0;
+    accurateClockState = {cx, cy, cx, cy, -1, 0, false};
 
     // Draw static background once
     drawClockFace(cx, cy, radius);
 
     //epaper.fillScreen(TFT_WHITE);
     epaper.update();
+    updateAccurateClockIfNeeded();
+}
 
-    while (true)
+bool updateAccurateClockIfNeeded()
+{
+    const int16_t cx = 400;
+    const int16_t cy = 240;
+    const int16_t radius = 195; //195
+
+    struct tm timeinfo;
+
+    if (!getLocalTime(&timeinfo))
+        return false;
+
+    int hh = timeinfo.tm_hour;
+    int mm = timeinfo.tm_min;
+
+    if (mm == accurateClockState.lastMinute)
+        return false;
+
+    accurateClockState.lastMinute = mm;
+
+    float mdeg = mm * 6.0f;
+    float hdeg = (hh % 12) * 30.0f + mdeg / 12.0f;
+
+    float mx = cos((mdeg - 90) * 0.0174532925f);
+    float my = sin((mdeg - 90) * 0.0174532925f);
+
+    float hx = cos((hdeg - 90) * 0.0174532925f);
+    float hy = sin((hdeg - 90) * 0.0174532925f);
+
+    int16_t newMx = mx * 154 + cx;
+    int16_t newMy = my * 154 + cy;
+
+    int16_t newHx = hx * 114 + cx;
+    int16_t newHy = hy * 114 + cy;
+
+    // Erase previous hands (skip first time)
+    if (accurateClockState.initialized)
     {
-        //epaper.fillScreen(TFT_WHITE);
-        struct tm timeinfo;
-
-        if (getLocalTime(&timeinfo))
-        {
-            int hh = timeinfo.tm_hour;
-            int mm = timeinfo.tm_min;
-
-            if (mm != lastMinute)
-            {
-                lastMinute = mm;
-
-                float mdeg = mm * 6.0f;
-                float hdeg = (hh % 12) * 30.0f + mdeg / 12.0f;
-
-                float mx = cos((mdeg - 90) * 0.0174532925f);
-                float my = sin((mdeg - 90) * 0.0174532925f);
-
-                float hx = cos((hdeg - 90) * 0.0174532925f);
-                float hy = sin((hdeg - 90) * 0.0174532925f);
-
-                int16_t newMx = mx * 154 + cx;
-                int16_t newMy = my * 154 + cy;
-
-                int16_t newHx = hx * 114 + cx;
-                int16_t newHy = hy * 114 + cy;
-
-                // Erase previous hands (skip first time)
-                if (!firstDraw)
-                {
-                    epaper.drawLine(oldMx, oldMy, cx, cy, TFT_WHITE);
-                    epaper.drawLine(oldHx, oldHy, cx, cy, TFT_WHITE);
-                    epaper.drawLine(oldMx, oldMy, cx, cy, TFT_WHITE);
-                    epaper.drawLine(oldHx, oldHy, cx, cy, TFT_WHITE);
-                }
-
-                // Draw new hands
-                epaper.drawLine(newMx, newMy, cx, cy, TFT_BLACK);
-                epaper.drawLine(newHx, newHy, cx, cy, TFT_BLACK);
-                epaper.drawLine(newMx, newMy, cx, cy, TFT_BLACK);
-                epaper.drawLine(newHx, newHy, cx, cy, TFT_BLACK);
-
-                // Restore centre cap
-                epaper.fillCircle(cx, cy, 5, TFT_BLACK);
-
-                oldMx = newMx;
-                oldMy = newMy;
-                oldHx = newHx;
-                oldHy = newHy;
-
-                firstDraw = false;
-
-                // epaper.updataPartial(
-                //     updateX,
-                //     updateY,
-                //     updateSize,
-                //     updateSize
-                // );
-
-                // epaper.updataPartial(
-                //     300,
-                //     140,
-                //     200,
-                //     200
-                // );
-                epaper.update();
-
-                partialCount++;
-
-                if (partialCount >= 30)
-                {
-                    // Rebuild framebuffer completely
-                    drawClockFace(cx, cy, radius);
-
-                    epaper.drawLine(oldMx, oldMy, cx, cy, TFT_BLACK);
-                    epaper.drawLine(oldHx, oldHy, cx, cy, TFT_BLACK);
-                    epaper.drawLine(oldMx, oldMy, cx, cy, TFT_BLACK);
-                    epaper.drawLine(oldHx, oldHy, cx, cy, TFT_BLACK);
-
-                    epaper.fillCircle(cx, cy, 5, TFT_BLACK);
-
-                    epaper.update();
-
-                    partialCount = 0;
-                }
-            }
-        }
-
-        delay(1000);
+        epaper.drawLine(accurateClockState.oldMx, accurateClockState.oldMy, cx, cy, TFT_WHITE);
+        epaper.drawLine(accurateClockState.oldHx, accurateClockState.oldHy, cx, cy, TFT_WHITE);
+        epaper.drawLine(accurateClockState.oldMx, accurateClockState.oldMy, cx, cy, TFT_WHITE);
+        epaper.drawLine(accurateClockState.oldHx, accurateClockState.oldHy, cx, cy, TFT_WHITE);
     }
+
+    // Draw new hands
+    epaper.drawLine(newMx, newMy, cx, cy, TFT_BLACK);
+    epaper.drawLine(newHx, newHy, cx, cy, TFT_BLACK);
+    epaper.drawLine(newMx, newMy, cx, cy, TFT_BLACK);
+    epaper.drawLine(newHx, newHy, cx, cy, TFT_BLACK);
+
+    // Restore centre cap
+    epaper.fillCircle(cx, cy, 5, TFT_BLACK);
+
+    accurateClockState.oldMx = newMx;
+    accurateClockState.oldMy = newMy;
+    accurateClockState.oldHx = newHx;
+    accurateClockState.oldHy = newHy;
+    accurateClockState.initialized = true;
+
+    epaper.update();
+
+    accurateClockState.partialCount++;
+
+    if (accurateClockState.partialCount >= 30)
+    {
+        // Rebuild framebuffer completely
+        drawClockFace(cx, cy, radius);
+
+        epaper.drawLine(accurateClockState.oldMx, accurateClockState.oldMy, cx, cy, TFT_BLACK);
+        epaper.drawLine(accurateClockState.oldHx, accurateClockState.oldHy, cx, cy, TFT_BLACK);
+        epaper.drawLine(accurateClockState.oldMx, accurateClockState.oldMy, cx, cy, TFT_BLACK);
+        epaper.drawLine(accurateClockState.oldHx, accurateClockState.oldHy, cx, cy, TFT_BLACK);
+
+        epaper.fillCircle(cx, cy, 5, TFT_BLACK);
+
+        epaper.update();
+        accurateClockState.partialCount = 0;
+    }
+
+    return true;
 }
 
 static const unsigned char PROGMEM ui_clock_bitmap[] = {
     0x00,0x7f,0x00,0x00,0x01,0xff,0xc0,0x00,0x07,0xff,0xf0,0x00,0x0f,0xff,0xf8,0x00,0x1f,0xff,0xfc,0x00,0x3f,0xff,0xfe,0x00,0x3f,0xc1,0xfe,0x00,0x7f,0x00,0x7f,0x00,0x7e,0x00,0x3f,0x00,0xfe,0x00,0x3f,0x80,0xfc,0x00,0x1f,0x80,0xfc,0x00,0x1f,0x80,0xfc,0x00,0x1f,0x80,0xfc,0x00,0x1f,0x80,0xfc,0x00,0x1f,0x80,0xfe,0x00,0x3f,0x80,0x7e,0x00,0x3f,0x00,0x7f,0x00,0x7f,0x00,0x3f,0xc1,0xfe,0x00,0x3f,0xff,0xfe,0x00,0x1f,0xff,0xfc,0x00,0x0f,0xff,0xf8,0x00,0x07,0xff,0xf0,0x00,0x01,0xff,0xc0,0x00,0x00,0x7f,0x00,0x00};
 
+static bool updateUIClockHands(bool refreshDisplay)
+{
+  const int16_t cx = 584;
+  const int16_t cy = 236;
+
+  struct tm timeinfo;
+
+  if (!getLocalTime(&timeinfo))
+    return false;
+
+  int hh = timeinfo.tm_hour;
+  int mm = timeinfo.tm_min;
+
+  if (mm == uiClockState.lastMinute)
+    return false;
+
+  uiClockState.lastMinute = mm;
+
+  float mdeg = mm * 6.0;
+  float hdeg = (hh % 12) * 30.0 + mdeg / 12.0;
+
+
+  float mx = cos((mdeg - 90) * 0.0174532925);
+  float my = sin((mdeg - 90) * 0.0174532925);
+
+  float hx = cos((hdeg - 90) * 0.0174532925);
+  float hy = sin((hdeg - 90) * 0.0174532925);
+
+
+  int16_t newMx = mx * 154 + cx;
+  int16_t newMy = my * 154 + cy;
+
+  int16_t newHx = hx * 114 + cx;
+  int16_t newHy = hy * 114 + cy;
+
+
+  if (uiClockState.initialized)
+  {
+    epaper.drawLine(
+      uiClockState.oldMx,
+      uiClockState.oldMy,
+      cx,
+      cy,
+      TFT_WHITE
+    );
+
+    epaper.drawLine(
+      uiClockState.oldHx,
+      uiClockState.oldHy,
+      cx,
+      cy,
+      TFT_WHITE
+    );
+  }
+
+
+  epaper.drawLine(
+    newMx,
+    newMy,
+    cx,
+    cy,
+    TFT_BLACK
+  );
+
+  epaper.drawLine(
+    newHx,
+    newHy,
+    cx,
+    cy,
+    TFT_BLACK
+  );
+
+
+  epaper.fillCircle(
+    cx,
+    cy,
+    5,
+    TFT_BLACK
+  );
+
+
+  uiClockState.oldMx = newMx;
+  uiClockState.oldMy = newMy;
+
+  uiClockState.oldHx = newHx;
+  uiClockState.oldHy = newHy;
+  uiClockState.initialized = true;
+
+  if (refreshDisplay)
+    epaper.update();
+
+  uiClockState.partialCount++;
+
+  if (refreshDisplay && uiClockState.partialCount >= 30)
+  {
+    epaper.update();
+    uiClockState.partialCount = 0;
+  }
+
+  return true;
+}
+
 void drawUIClock(int insideValue, int outsideValue, int insideHumidity, int outsideHumidity)
 {
+  activeDisplayScreen = DisplayScreen::UIClock;
+
   const int16_t cx = 584;
   const int16_t cy = 236;
 
   const int16_t radius = 195;
 
-  const int16_t updateX = cx - radius - 15;
-  const int16_t updateY = cy - radius - 15;
-  const int16_t updateSize = radius * 2 + 30;
-
-
-  int16_t oldHx = cx;
-  int16_t oldHy = cy;
-  int16_t oldMx = cx;
-  int16_t oldMy = cy;
-
-  int lastMinute = -1;
-  int partialCount = 0;
-
+  uiClockState = {cx, cy, cx, cy, -1, 0, false};
 
   epaper.fillScreen(TFT_WHITE);
 
@@ -836,107 +948,13 @@ void drawUIClock(int insideValue, int outsideValue, int insideHumidity, int outs
     TFT_BLACK
   );
 
-
+  updateUIClockHands(false);
   epaper.update();
+}
 
-
-  while (true)
-  {
-    struct tm timeinfo;
-
-    if (getLocalTime(&timeinfo))
-    {
-      int hh = timeinfo.tm_hour;
-      int mm = timeinfo.tm_min;
-
-
-      if (mm != lastMinute)
-      {
-        lastMinute = mm;
-
-
-        float mdeg = mm * 6.0;
-        float hdeg = (hh % 12) * 30.0 + mdeg / 12.0;
-
-
-        float mx = cos((mdeg - 90) * 0.0174532925);
-        float my = sin((mdeg - 90) * 0.0174532925);
-
-        float hx = cos((hdeg - 90) * 0.0174532925);
-        float hy = sin((hdeg - 90) * 0.0174532925);
-
-
-        int16_t newMx = mx * 154 + cx;
-        int16_t newMy = my * 154 + cy;
-
-        int16_t newHx = hx * 114 + cx;
-        int16_t newHy = hy * 114 + cy;
-
-
-        epaper.drawLine(
-          oldMx,
-          oldMy,
-          cx,
-          cy,
-          TFT_WHITE
-        );
-
-        epaper.drawLine(
-          oldHx,
-          oldHy,
-          cx,
-          cy,
-          TFT_WHITE
-        );
-
-
-        epaper.drawLine(
-          newMx,
-          newMy,
-          cx,
-          cy,
-          TFT_BLACK
-        );
-
-        epaper.drawLine(
-          newHx,
-          newHy,
-          cx,
-          cy,
-          TFT_BLACK
-        );
-
-
-        epaper.fillCircle(
-          cx,
-          cy,
-          5,
-          TFT_BLACK
-        );
-
-
-        oldMx = newMx;
-        oldMy = newMy;
-
-        oldHx = newHx;
-        oldHy = newHy;
-
-
-        epaper.update();
-
-
-        partialCount++;
-
-        if (partialCount >= 30)
-        {
-          epaper.update();
-          partialCount = 0;
-        }
-      }
-    }
-
-    delay(1000);
-  }
+bool updateUIClockIfNeeded()
+{
+  return updateUIClockHands(true);
 }
 
 static const unsigned char PROGMEM image_choice_bullet_off_bits[] = {
@@ -1066,6 +1084,8 @@ const unsigned char* getWindArrow(WindDirection dir, uint16_t* w, uint16_t* h)
 
 void drawForecastScreen(Weather::CurrentConditions current, Weather::ForecastDay today, Weather::ForecastDay tomorrow, Weather::ForecastDay dayAfterTomorrow)
 {
+    activeDisplayScreen = DisplayScreen::Forecast;
+
     epaper.fillScreen(TFT_WHITE);
 
     struct tm today_tm = *localtime(&current.observationTime);

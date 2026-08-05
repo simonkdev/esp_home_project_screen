@@ -6,6 +6,15 @@
 #include <Arduino.h>
 #include "calender.h"
 
+enum class DisplayScreen
+{
+    None,
+    Forecast,
+    Calendar,
+    AccurateClock,
+    UIClock
+};
+
 void initDisplay(void);
 void displayMeasurementTest(float value);
 void showWeather(const Weather* weather);
@@ -17,7 +26,11 @@ void drawCalendarEvents(
     time_t now
 );
 void drawAccurateClock(void);
+bool updateAccurateClockIfNeeded(void);
 void drawUIClock(int insideValue, int outsideValue, int insideHumidity, int outsideHumidity);
+bool updateUIClockIfNeeded(void);
+bool updateDisplay(void);
+DisplayScreen currentDisplayScreen(void);
 void drawForecastScreen(Weather::CurrentConditions current, Weather::ForecastDay today, Weather::ForecastDay tomorrow, Weather::ForecastDay dayAfterTomorrow);
 void PartialTest(void);
 
@@ -25,22 +38,3 @@ void PartialTest(void);
 #ifdef EPAPER_ENABLE
 extern EPaper epaper;
 #endif
-
-
-// class Display
-// {
-//     public:
-//         Display();
-//         begin();
-//         idle();
-
-//         drawCalender(const Calendar& calendar1, const Calendar& calendar2);
-//         drawFullscreenClock(void);
-//         drawClockCombination(int insideValue, int outSideValue, int insideHumidity, int outsideHumidity);
-//         drawForecastScreen(Weather::CurrentConditions current, Weather::ForecastDay today, Weather::ForecastDay tomorrow, Weather::ForecastDay dayAfterTomorrow);
-
-//     public:
-//         EPaper screen;
-//         bool idle;
-
-// }
